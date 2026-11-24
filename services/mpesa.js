@@ -26,7 +26,7 @@ function formatPhone(phone) {
 
 async function initiateSTKPush({ phone, amount, accountRef, description }) {
   const token = await getAccessToken();
-  const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
+ const timestamp = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().replace(/[^0-9]/g, '').slice(0, 14);
   const password = Buffer.from(
     `${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`
   ).toString('base64');
