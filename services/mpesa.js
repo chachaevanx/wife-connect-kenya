@@ -1,11 +1,8 @@
-?:::
-```javascript
 const axios = require('axios');
 
-const BASE_MPESA_URL =
-  process.env.MPESA_ENV === 'production'
-    ? 'https://api.safaricom.co.ke'
-    : 'https://sandbox.safaricom.co.ke';
+const BASE_MPESA_URL = process.env.MPESA_ENV === 'production'
+  ? '[https://api.safaricom.co.ke](https://api.safaricom.co.ke)'
+  : '[https://sandbox.safaricom.co.ke](https://sandbox.safaricom.co.ke)';
 
 // Generate OAuth access token
 async function getAccessToken() {
@@ -16,25 +13,22 @@ async function getAccessToken() {
     throw new Error('Missing M-Pesa API credentials');
   }
 
-  const auth = Buffer.from(
-    `${consumerKey}:${consumerSecret}`
-  ).toString('base64');
+  const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
 
   const response = await axios.get(
     `${BASE_MPESA_URL}/oauth/v1/generate?grant_type=client_credentials`,
     {
-      headers: {
-        Authorization: `Basic ${auth}`
-      }
+      headers: { Authorization: `Basic ${auth}` },
+      timeout: 15000
     }
   );
 
   return response.data.access_token;
 }
 
-// Format Kenyan phone numbers
+// Format Kenyan phone numbers to 2547XXXXXXXX or 2541XXXXXXXX
 function formatPhone(phone) {
-  let clean = String(phone)
+  let clean = String(phone || '')
     .replace(/\s+/g, '')
     .replace(/^\+/, '');
 
@@ -51,7 +45,7 @@ function formatPhone(phone) {
   return clean;
 }
 
-// Generate Safaricom timestamp
+// Generate Safaricom timestamp (YYYYMMDDHHmmss in EAT / UTC+3)
 function generateTimestamp() {
   return new Date(Date.now() + 3 * 60 * 60 * 1000)
     .toISOString()
@@ -59,68 +53,46 @@ function generateTimestamp() {
     .slice(0, 14);
 }
 
-// Initiate STK Push
-async function initiateSTKPush({
-  phone,
-  amount,
-  accountRef,
-  description
-}) {
+// Initiate STK Push for Buy Goods (Till)
+async function initiateSTKPush({ phone, amount, accountRef, description }) {
   try {
-    const shortcode = process.env.MPESA_SHORTCODE;
+    const businessShortCode = process.env.MPESA_SHORTCODE;
+    const tillNumber = process.env.MPESA_TILL_NUMBER || process.env.MPESA_SHORTCODE;
     const passkey = process.env.MPESA_PASSKEY;
-    const tillNumber = process.env.MPESA_TILL_NUMBER;
 
-    if (!shortcode || !passkey || !tillNumber) {
-      throw new Error('Missing M-Pesa shortcode, passkey or Till number');
+    if (!businessShortCode || !tillNumber || !passkey) {
+      throw new Error('Missing MPESA_SHORTCODE, MPESA_TILL_NUMBER, or MPESA_PASSKEY');
     }
 
     const numericAmount = Number(amount);
-
-    if (
-      !Number.isFinite(numericAmount) ||
-      numericAmount < 1
-    ) {
+    if (!Number.isFinite(numericAmount) || numericAmount < 1) {
       throw new Error('Invalid payment amount');
     }
 
     const customerPhone = formatPhone(phone);
-
     const token = await getAccessToken();
-
     const timestamp = generateTimestamp();
-
     const password = Buffer.from(
-      `${shortcode}${passkey}${timestamp}`
+      `${businessShortCode}${passkey}${timestamp}`
     ).toString('base64');
 
-    const callbackURL =
-      `${process.env.BASE_URL.replace(/\/+$/, '')}/api/mpesa/callback`;
+    const baseUrl = (process.env.BASE_URL || '[https://wife-connect-kenya-1.onrender.com](https://wife-connect-kenya-1.onrender.com)')
+      .trim()
+      .replace(/\/+$/, '');
+    const callbackURL = `${baseUrl}/api/mpesa/callback`;
 
     const payload = {
-      BusinessShortCode: shortcode,
+      BusinessShortCode: String(businessShortCode).trim(),
       Password: password,
       Timestamp: timestamp,
-
-      TransactionType:
-        process.env.MPESA_TRANSACTION_TYPE ||
-        'CustomerBuyGoodsOnline',
-
+      TransactionType: process.env.MPESA_TRANSACTION_TYPE || 'CustomerBuyGoodsOnline',
       Amount: Math.round(numericAmount),
-
       PartyA: customerPhone,
-
-      PartyB: tillNumber,
-
+      PartyB: String(tillNumber).trim(),
       PhoneNumber: customerPhone,
-
       CallBackURL: callbackURL,
-
-      AccountReference: String(accountRef || 'PAYMENT')
-        .slice(0, 12),
-
-      TransactionDesc: String(description || 'Website payment')
-        .slice(0, 13)
+      AccountReference: String(accountRef || 'GALAXY').slice(0, 12),
+      TransactionDesc: String(description || 'WiFi Plan').slice(0, 13)
     };
 
     const response = await axios.post(
@@ -136,19 +108,12 @@ async function initiateSTKPush({
     );
 
     console.log('STK Push Response:', response.data);
-
     return response.data;
-
   } catch (error) {
     console.error(
       'STK PUSH FAILED:',
-      JSON.stringify(
-        error.response?.data || error.message,
-        null,
-        2
-      )
+      JSON.stringify(error.response?.data || error.message, null, 2)
     );
-
     throw new Error(
       error.response?.data?.errorMessage ||
       error.response?.data?.ResponseDescription ||
@@ -158,9 +123,4 @@ async function initiateSTKPush({
   }
 }
 
-module.exports = {
-  initiateSTKPush,
-  formatPhone,
-  getAccessToken
-};
-```
+module.exports = { initiateSTKPush, formatPhone, getAccessToken };
