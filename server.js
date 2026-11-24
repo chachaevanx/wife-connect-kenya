@@ -3,7 +3,6 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const cron = require('node-cron');
-const { Pool } = require('pg');
 const cookieParser = require('cookie-parser');
 
 const PACKAGES = require('./packages');
@@ -17,6 +16,8 @@ const {
     activateHotspotUser,
     disconnectAndRemoveUser
 } = require('./services/mikrotik');
+
+const adminRoutes = require('./routes/admin');
 
 // ======================================
 // APPLICATION CONFIGURATION
@@ -33,34 +34,23 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ======================================
-// POSTGRESQL DATABASE
+// ADMIN CONFIGURATION
 // ======================================
-
-if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL is missing from environment variables');
-}
 
 if (!process.env.ADMIN_JWT_SECRET ||
     process.env.ADMIN_JWT_SECRET.length < 32) {
-    throw new Error('ADMIN_JWT_SECRET must contain at least 32 characters');
+    throw new Error(
+        'ADMIN_JWT_SECRET must contain at least 32 characters.'
+    );
 }
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL.includes('localhost')
-        ? false
-        : { rejectUnauthorized: false }
-});
-
-pool.on('error', (err) => {
-    console.error('PostgreSQL error:', err.message);
-});
+app.use('/api/admin', adminRoutes);
 
 // ======================================
 // TRANSACTION STORAGE
 // ======================================
 
-// Note: These are currently stored in memory.
+// These records are temporary.
 // They will be lost when the server restarts.
 
 const pendingTransactions = new Map();
@@ -68,54 +58,11 @@ const pendingTransactions = new Map();
 const activeSubscriptions = [];
 
 // ======================================
-// ADMIN DATABASE INITIALIZATION
-// ======================================
-
-async function initializeDatabase() {
-
-    await pool.query(`
-        CREATE TABLE IF NOT EXISTS admin_users (
-            id SERIAL PRIMARY KEY,
-            slot INTEGER UNIQUE NOT NULL CHECK (slot IN (1, 2)),
-            full_name VARCHAR(150) NOT NULL,
-            email VARCHAR(255) UNIQUE NOT NULL,
-            phone VARCHAR(30),
-            password_hash TEXT NOT NULL,
-            profile_image BYTEA,
-            profile_image_type VARCHAR(100),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-    const adminCount = await pool.query(
-        'SELECT COUNT(*) FROM admin_users'
-    );
-
-    console.log(
-        'Administrator accounts:',
-        adminCount.rows[0].count
-    );
-
-    // Admin accounts will be initialized by routes/admin.js.
-}
-
-// ======================================
-// ADMIN ROUTES
-// ======================================
-
-const adminRoutes = require('./routes/admin');
-
-app.use('/api/admin', adminRoutes(pool));
-
-// ======================================
 // CUSTOMER PACKAGES
 // ======================================
 
 app.get('/api/packages', (req, res) => {
-
     res.json(PACKAGES);
-
 });
 
 // ======================================
@@ -130,7 +77,7 @@ app.post('/api/pay', async (req, res) => {
 
         if (!phone || !packageId) {
             return res.status(400).json({
-                error: 'Phone number and package are required'
+                error: 'Phone number and package are required.'
             });
         }
 
@@ -140,7 +87,7 @@ app.post('/api/pay', async (req, res) => {
 
         if (!pkg) {
             return res.status(400).json({
-                error: 'Invalid package selected'
+                error: 'Invalid package selected.'
             });
         }
 
@@ -160,7 +107,7 @@ app.post('/api/pay', async (req, res) => {
 
         if (!stkRes.CheckoutRequestID) {
             throw new Error(
-                'Safaricom did not return a CheckoutRequestID'
+                'Safaricom did not return a CheckoutRequestID.'
             );
         }
 
@@ -194,7 +141,7 @@ app.post('/api/pay', async (req, res) => {
 
         res.status(500).json({
 
-            error: 'Failed to initiate M-Pesa payment'
+            error: 'Failed to initiate M-Pesa payment.'
 
         });
 
@@ -214,7 +161,7 @@ app.post('/api/mpesa/callback', async (req, res) => {
 
         if (!callbackData) {
             return res.status(400).json({
-                error: 'Invalid callback'
+                error: 'Invalid callback.'
             });
         }
 
@@ -236,15 +183,19 @@ app.post('/api/mpesa/callback', async (req, res) => {
 
         }
 
-        // Prevent processing the same successful callback twice.
-        if (tx.status === 'SUCCESS') {
+        if (
+            tx.status === 'SUCCESS' ||
+            tx.status === 'PROCESSING'
+        ) {
             return res.json({
                 ResultCode: 0,
-                ResultDesc: 'Already processed'
+                ResultDesc: 'Already processing or completed'
             });
         }
 
         if (callbackData.ResultCode === 0) {
+
+            tx.status = 'PROCESSING';
 
             const voucherCode = Math.random()
                 .toString(36)
@@ -373,7 +324,7 @@ app.get('/api/status/:checkoutId', (req, res) => {
 // ADMIN DASHBOARD DATA
 // ======================================
 
-app.get('/api/admin/overview-data', async (req, res) => {
+app.get('/api/admin/overview-data', (req, res) => {
 
     res.status(404).json({
 
@@ -443,37 +394,14 @@ app.get('/admin', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-async function startServer() {
+app.listen(PORT, () => {
 
-    try {
+    console.log(
+        `WIFE CONNECT KENYA running on port ${PORT}`
+    );
 
-        await pool.query('SELECT NOW()');
+    console.log(
+        'Admin dashboard: /admin/login.html'
+    );
 
-        await initializeDatabase();
-
-        app.listen(PORT, () => {
-
-            console.log(
-                `WIFE CONNECT KENYA running on port ${PORT}`
-            );
-
-            console.log(
-                'Admin dashboard: /admin/login.html'
-            );
-
-        });
-
-    } catch (err) {
-
-        console.error(
-            'Server startup failed:',
-            err.message
-        );
-
-        process.exit(1);
-
-    }
-
-}
-
-startServer();
+});
