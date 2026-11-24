@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Login | WIFE CONNECT KENYA</title>
+
+    <meta name="theme-color" content="#071a36">
+
+    <link rel="stylesheet" href="admin.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background:
+                radial-gradient(circle at top right, #174d89, transparent 40%),
+                linear-gradient(135deg, #06152e, #0b2850);
+            color: white;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            padding: 35px 28px;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.09);
+            border: 1px solid rgba(255,255,255,0.16);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            backdrop-filter: blur(15px);
+        }
+
+        .logo {
+            width: 75px;
+            height: 75px;
+            margin: 0 auto 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            background: #087cf0;
+            font-size: 35px;
+            font-weight: bold;
+            box-shadow: 0 8px 25px rgba(0,120,255,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #c3d5ee;
+            font-size: 13px;
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 9px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            outline: none;
+            font-size: 15px;
+        }
+
+        input::placeholder {
+            color: #b7c8df;
+        }
+
+        input:focus {
+            border-color: #1688ff;
+        }
+
+        .password-box {
+            position: relative;
+        }
+
+        .password-box input {
+            padding-right: 65px;
+        }
+
+        .show-password {
+            position: absolute;
+            right: 12px;
+            top: 13px;
+            background: none;
+            border: none;
+            color: #8fc5ff;
+            cursor: pointer;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 9px;
+            background: linear-gradient(90deg, #087cf0, #19a0ff);
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .message {
+            margin-top: 18px;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .footer {
+            margin-top: 28px;
+            text-align: center;
+            color: #9eb6d4;
+            font-size: 11px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="login-card">
+
+        <div class="logo">W</div>
+
+        <h1>WIFE CONNECT KENYA</h1>
+
+        <p class="subtitle">
+            Administrator Control Panel
+        </p>
+
+        <form id="loginForm">
+
+            <label for="email">Administrator Email</label>
+
+            <input
+                type="email"
+                id="email"
+                placeholder="Enter your email"
+                autocomplete="username"
+                required
+            >
+
+            <label for="password">Password</label>
+
+            <div class="password-box">
+
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    required
+                >
+
+                <button
+                    type="button"
+                    class="show-password"
+                    id="togglePassword"
+                >
+                    Show
+                </button>
+
+            </div>
+
+            <button
+                type="submit"
+                class="login-btn"
+                id="loginButton"
+            >
+                Sign In →
+            </button>
+
+        </form>
+
+        <div
+            class="message"
+            id="message"
+            role="status"
+            aria-live="polite"
+        ></div>
+
+        <div class="footer">
+            © 2026 WIFE CONNECT KENYA<br>
+            Authorized Administrators Only
+        </div>
+
+    </main>
+
+    <script src="login.js"></script>
+
+</body>
+</html>
