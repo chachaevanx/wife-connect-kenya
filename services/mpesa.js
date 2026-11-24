@@ -1,4 +1,3 @@
-
 const axios = require('axios');
 
 const BASE_MPESA_URL = process.env.MPESA_ENV === 'production'
@@ -54,14 +53,6 @@ async function initiateSTKPush({ phone, amount, accountRef, description }) {
     console.error('STK Push Error:', err.response?.data || err.message);
     throw err;
   }
-}
-
-  const res = await axios.post(
-    `${BASE_MPESA_URL}/mpesa/stkpush/v1/processrequest`,
-    payload,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return res.data;
 }
 
 module.exports = { initiateSTKPush, formatPhone };
