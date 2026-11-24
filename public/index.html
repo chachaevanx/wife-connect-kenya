@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Galaxy Wi-Fi | Fast & Reliable Internet</title>
+  <style>
+    :root {
+      --bg-dark: #070b19;
+      --card-bg: rgba(20, 29, 56, 0.85);
+      --card-border: rgba(99, 102, 241, 0.25);
+      --primary: #6366f1;
+      --accent: #38bdf8;
+      --success: #10b981;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(circle at top center, #1e1b4b 0%, #090d1f 55%, #050811 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 20px 16px 40px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 460px;
+      margin: 0 auto;
+    }
+
+    /* Header & Welcome Banner */
+    .header {
+      text-align: center;
+      margin-bottom: 22px;
+      padding: 18px 14px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(56, 189, 248, 0.12));
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 18px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(to right, #ffffff, #38bdf8, #a5b4fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    .welcome-text {
+      font-size: 14px;
+      color: #cbd5e1;
+    }
+
+    /* Device Mode Switcher */
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.9);
+      padding: 6px;
+      border-radius: 14px;
+      border: 1px solid var(--card-border);
+      margin-bottom: 18px;
+    }
+
+    .tab {
+      padding: 11px 8px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab.active {
+      background: linear-gradient(135deg, #4f46e5, #0284c7);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    }
+
+    .tab-hint {
+      text-align: center;
+      font-size: 12px;
+      color: var(--accent);
+      margin-bottom: 14px;
+      font-weight: 500;
+    }
+
+    /* Packages Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 11px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 14px;
+      padding: 14px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .card.selected {
+      border-color: #38bdf8;
+      background: linear-gradient(145deg, rgba(14, 116, 144, 0.45), rgba(67, 56, 202, 0.45));
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.28);
+    }
+
+    .card.selected::after {
+      content: "✓";
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font-size: 12px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+
+    .dur {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+    }
+
+    .price {
+      font-size: 20px;
+      font-weight: 800;
+      color: #34d399;
+    }
+
+    .price span {
+      font-size: 12px;
+      font-weight: 600;
+      color: #a7f3d0;
+    }
+
+    .speed-tag {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 11px;
+      color: #94a3b8;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    /* Payment Card */
+    .box {
+      margin-top: 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 18px;
+      border-radius: 16px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+    }
+
+    .box-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .selected-summary {
+      font-size: 12px;
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: rgba(7, 11, 25, 0.85);
+      color: #ffffff;
+      font-size: 15px;
+      margin-bottom: 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-color: #38bdf8;
+    }
+
+    .pay-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+      transition: transform 0.15s ease;
+    }
+
+    .pay-btn:active {
+      transform: scale(0.98);
+    }
+
+    .voucher-btn {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #38bdf8;
+      border-radius: 10px;
+      background: rgba(56, 189, 248, 0.12);
+      color: #38bdf8;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #fbbf24;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 12px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Welcoming Header -->
+    <div class="header">
+      <div class="badge"><span class="dot"></span> Instant M-Pesa Activation</div>
+      <h1>Welcome to Galaxy Wi-Fi</h1>
+      <p class="welcome-text">Unlimited high-speed browsing, streaming & downloads. Pick a plan below to get online in seconds.</p>
+    </div>
+
+    <!-- 1 Device vs 2 Devices Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="filterTab(1, this)">📱 1 Device Only</button>
+      <button class="tab" onclick="filterTab(2, this)">📱💻 2 Devices</button>
+    </div>
+    <div id="tab-hint" class="tab-hint">Locked to this single device (No sharing)</div>
+
+    <!-- Dynamic Packages Grid -->
+    <div id="pkg-grid" class="grid"></div>
+
+    <!-- M-Pesa STK Push Checkout -->
+    <div class="box">
+      <div class="box-title">
+        <span>Pay via M-Pesa</span>
+        <span id="selected-summary" class="selected-summary">Select a package above</span>
+      </div>
+      <input type="tel" id="phone" placeholder="Enter Safaricom Number (e.g. 0712...)" />
+      <button class="pay-btn" onclick="startPayment()">Connect Now with M-Pesa</button>
+      <div id="status"></div>
+    </div>
+
+    <!-- 2nd Device / Voucher Code Login -->
+    <div class="box">
+      <div class="box-title">
+        <span>Already Paid? (2nd Device Login)</span>
+      </div>
+      <input type="text" id="voucher-input" placeholder="Enter your 6-character Voucher Code" style="text-transform: uppercase;" />
+      <button class="voucher-btn" onclick="loginWithVoucher()">Login with Voucher Code</button>
+    </div>
+
+    <div class="footer">
+      Powered by <strong>Galaxy Wi-Fi</strong> • Fast, Secure & Reliable
+    </div>
+
+    <!-- Hidden MikroTik Auto-Login Form -->
+    <form id="mikrotik-login" method="post" action="">
+      <input type="hidden" name="username" id="mk-user" />
+      <input type="hidden" name="password" id="mk-pass" />
+    </form>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const mac = params.get('mac') || '';
+    const linkLogin = params.get('link-login-only') || 'http://10.5.50.1/login';
+    document.getElementById('mikrotik-login').action = linkLogin;
+
+    let allPackages = [];
+    let selectedPkg = null;
+    let activeDevicesTab = 1;
+
+    async function loadPackages() {
+      const res = await fetch('/api/packages');
+      allPackages = await res.json();
+      renderPackages();
+    }
+
+    function filterTab(devices, btn) {
+      activeDevicesTab = devices;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      selectedPkg = null;
+      document.getElementById('selected-summary').innerText = 'Select a package above';
+      document.getElementById('tab-hint').innerText = devices === 1
+        ? 'Locked to this single device (No sharing)'
+        : 'Connect up to 2 devices (e.g., Phone + Laptop)';
+      renderPackages();
+    }
+
+    function renderPackages() {
+      const grid = document.getElementById('pkg-grid');
+      const filtered = allPackages.filter(p => p.devices === activeDevicesTab);
+      grid.innerHTML = filtered.map(p => `
+        <div class="card ${selectedPkg && selectedPkg.id === p.id ? 'selected' : ''}" onclick="selectPkg('${p.id}')">
+          <div class="dur">${p.label.split('(')[0].trim()}</div>
+          <div class="price"><span>KES</span> ${p.price}</div>
+          <div class="speed-tag">Up to ${p.rateLimit.split('/')[0]}bps</div>
+        </div>
+      `).join('');
+    }
+
+    function selectPkg(id) {
+      selectedPkg = allPackages.find(p => p.id === id);
+      document.getElementById('selected-summary').innerText = `${selectedPkg.label.split('(')[0].trim()} • KES ${selectedPkg.price}`;
+      renderPackages();
+    }
+
+    async function startPayment() {
+      const phone = document.getElementById('phone').value.trim();
+      const statusEl = document.getElementById('status');
+      if (!selectedPkg) return statusEl.innerText = 'Please tap a package card first.';
+      if (!phone) return statusEl.innerText = 'Please enter your M-Pesa phone number.';
+
+      statusEl.style.color = '#fbbf24';
+      statusEl.innerText = 'Sending M-Pesa prompt to your phone...';
+
+      const res = await fetch('/api/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, packageId: selectedPkg.id, mac })
+      });
+      const data = await res.json();
+
+      if (data.checkoutRequestId) {
+        statusEl.innerText = 'Check your phone & enter your M-Pesa PIN...';
+        pollStatus(data.checkoutRequestId);
+      } else {
+        statusEl.style.color = '#f87171';
+        statusEl.innerText = data.error || 'Could not send M-Pesa prompt. Try again.';
+      }
+    }
+
+    function pollStatus(checkoutId) {
+      const statusEl = document.getElementById('status');
+      const interval = setInterval(async () => {
+        const res = await fetch(`/api/status/${checkoutId}`);
+        const data = await res.json();
+
+        if (data.status === 'SUCCESS') {
+          clearInterval(interval);
+          statusEl.style.color = '#34d399';
+          statusEl.innerHTML = data.devices === 2
+            ? `Welcome to Galaxy Wi-Fi! Your 2-Device Code is: <b>${data.voucher}</b>. Connecting...`
+            : `Welcome to Galaxy Wi-Fi! Payment received. Connecting...`;
+
+          document.getElementById('mk-user').value = data.voucher;
+          document.getElementById('mk-pass').value = data.voucher;
+          setTimeout(() => document.getElementById('mikrotik-login').submit(), 2200);
+        } else if (data.status === 'FAILED') {
+          clearInterval(interval);
+          statusEl.style.color = '#f87171';
+          statusEl.innerText = 'Payment cancelled or failed. Please try again.';
+        }
+      }, 3000);
+    }
+
+    function loginWithVoucher() {
+      const code = document.getElementById('voucher-input').value.trim().toUpperCase();
+      if (!code) return alert('Please enter your voucher code.');
+      document.getElementById('mk-user').value = code;
+      document.getElementById('mk-pass').value = code;
+      document.getElementById('mikrotik-login').submit();
+    }
+
+    loadPackages();
+  </script>
+</body>
+</html>
