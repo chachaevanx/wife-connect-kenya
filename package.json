@@ -1,7 +1,7 @@
 {
   "name": "wife-connect-kenya",
   "version": "1.0.0",
-  "description": "WIFE CONNECT KENYA - MikroTik Hotspot Billing System",
+  "description": "WIFE CONNECT KENYA Hotspot Billing System",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -12,11 +12,8 @@
     "express": "^4.21.1",
     "node-cron": "^3.0.3",
     "node-routeros": "^1.6.9",
-    "pg": "^8.13.1",
-    "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2"
   }
 }
-
