@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Galaxy Wi-Fi | Fast & Reliable Internet</title>
+
   <style>
     :root {
       --bg-dark: #070b19;
@@ -36,7 +37,6 @@
       margin: 0 auto;
     }
 
-    /* Header & Welcome Banner */
     .header {
       text-align: center;
       margin-bottom: 22px;
@@ -85,7 +85,6 @@
       color: #cbd5e1;
     }
 
-    /* Device Mode Switcher */
     .tabs {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -123,7 +122,6 @@
       font-weight: 500;
     }
 
-    /* Packages Grid */
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -192,7 +190,6 @@
       border-radius: 6px;
     }
 
-    /* Payment Card */
     .box {
       margin-top: 20px;
       background: var(--card-bg);
@@ -273,6 +270,70 @@
       color: #fbbf24;
     }
 
+    /* CUSTOMER CONTACT SECTION */
+
+    .contact-box {
+      margin-top: 20px;
+      padding: 18px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      text-align: center;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .contact-box h2 {
+      font-size: 19px;
+      margin-bottom: 8px;
+      color: #38bdf8;
+    }
+
+    .contact-box p {
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-bottom: 15px;
+    }
+
+    .contact-buttons {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .contact-btn {
+      display: block;
+      padding: 13px;
+      border-radius: 10px;
+      text-decoration: none;
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      transition: transform 0.2s;
+    }
+
+    .contact-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .call-btn {
+      background: #2563eb;
+    }
+
+    .sms-btn {
+      background: #7c3aed;
+    }
+
+    .whatsapp-btn {
+      background: #16a34a;
+    }
+
+    .contact-number {
+      margin-top: 13px;
+      color: #34d399;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
     .footer {
       text-align: center;
       margin-top: 24px;
@@ -281,160 +342,434 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
-    <!-- Welcoming Header -->
+
+    <!-- WELCOME HEADER -->
+
     <div class="header">
-      <div class="badge"><span class="dot"></span> Instant M-Pesa Activation</div>
+      <div class="badge">
+        <span class="dot"></span>
+        Instant M-Pesa Activation
+      </div>
+
       <h1>Welcome to Galaxy Wi-Fi</h1>
-      <p class="welcome-text">Unlimited high-speed browsing, streaming & downloads. Pick a plan below to get online in seconds.</p>
+
+      <p class="welcome-text">
+        Unlimited high-speed browsing, streaming & downloads.
+        Pick a plan below to get online in seconds.
+      </p>
     </div>
 
-    <!-- 1 Device vs 2 Devices Tabs -->
+    <!-- DEVICE SELECTION -->
+
     <div class="tabs">
-      <button class="tab active" onclick="filterTab(1, this)">📱 1 Device Only</button>
-      <button class="tab" onclick="filterTab(2, this)">📱💻 2 Devices</button>
-    </div>
-    <div id="tab-hint" class="tab-hint">Locked to this single device (No sharing)</div>
+      <button class="tab active" onclick="filterTab(1, this)">
+        📱 1 Device Only
+      </button>
 
-    <!-- Dynamic Packages Grid -->
+      <button class="tab" onclick="filterTab(2, this)">
+        📱💻 2 Devices
+      </button>
+    </div>
+
+    <div id="tab-hint" class="tab-hint">
+      Locked to this single device (No sharing)
+    </div>
+
+    <!-- INTERNET PACKAGES -->
+
     <div id="pkg-grid" class="grid"></div>
 
-    <!-- M-Pesa STK Push Checkout -->
+    <!-- M-PESA PAYMENT -->
+
     <div class="box">
+
       <div class="box-title">
         <span>Pay via M-Pesa</span>
-        <span id="selected-summary" class="selected-summary">Select a package above</span>
+        <span id="selected-summary" class="selected-summary">
+          Select a package above
+        </span>
       </div>
-      <input type="tel" id="phone" placeholder="Enter Safaricom Number (e.g. 0712...)" />
-      <button class="pay-btn" onclick="startPayment()">Connect Now with M-Pesa</button>
+
+      <input
+        type="tel"
+        id="phone"
+        placeholder="Enter Safaricom Number (e.g. 0712...)"
+      />
+
+      <button class="pay-btn" onclick="startPayment()">
+        Connect Now with M-Pesa
+      </button>
+
       <div id="status"></div>
+
     </div>
 
-    <!-- 2nd Device / Voucher Code Login -->
+    <!-- VOUCHER LOGIN -->
+
     <div class="box">
+
       <div class="box-title">
         <span>Already Paid? (2nd Device Login)</span>
       </div>
-      <input type="text" id="voucher-input" placeholder="Enter your 6-character Voucher Code" style="text-transform: uppercase;" />
-      <button class="voucher-btn" onclick="loginWithVoucher()">Login with Voucher Code</button>
+
+      <input
+        type="text"
+        id="voucher-input"
+        placeholder="Enter your 6-character Voucher Code"
+        style="text-transform: uppercase;"
+      />
+
+      <button class="voucher-btn" onclick="loginWithVoucher()">
+        Login with Voucher Code
+      </button>
+
     </div>
+
+    <!-- CUSTOMER CONTACT INFORMATION -->
+
+    <div class="contact-box">
+
+      <h2>📞 Need Help?</h2>
+
+      <p>
+        Contact Galaxy Wi-Fi customer support for payments,
+        connection problems or assistance.
+      </p>
+
+      <div class="contact-buttons">
+
+        <a
+          href="tel:+254728847578"
+          class="contact-btn call-btn"
+        >
+          📞 CALL CUSTOMER SUPPORT
+        </a>
+
+        <a
+          href="sms:+254728847578"
+          class="contact-btn sms-btn"
+        >
+          ✉️ SEND SMS
+        </a>
+
+        <a
+          href="https://wa.me/254728847578"
+          target="_blank"
+          rel="noopener"
+          class="contact-btn whatsapp-btn"
+        >
+          💬 CHAT ON WHATSAPP
+        </a>
+
+      </div>
+
+      <div class="contact-number">
+        0728847578
+      </div>
+
+    </div>
+
+    <!-- FOOTER -->
 
     <div class="footer">
-      Powered by <strong>Galaxy Wi-Fi</strong> • Fast, Secure & Reliable
+      Powered by <strong>Galaxy Wi-Fi</strong>
+      • Fast, Secure & Reliable
     </div>
 
-    <!-- Hidden MikroTik Auto-Login Form -->
+    <!-- HIDDEN MIKROTIK LOGIN FORM -->
+
     <form id="mikrotik-login" method="post" action="">
+
       <input type="hidden" name="username" id="mk-user" />
+
       <input type="hidden" name="password" id="mk-pass" />
+
     </form>
+
   </div>
 
   <script>
     const params = new URLSearchParams(window.location.search);
+
     const mac = params.get('mac') || '';
-    const linkLogin = params.get('link-login-only') || 'http://10.5.50.1/login';
+
+    const linkLogin =
+      params.get('link-login-only') ||
+      'http://10.5.50.1/login';
+
     document.getElementById('mikrotik-login').action = linkLogin;
 
     let allPackages = [];
     let selectedPkg = null;
     let activeDevicesTab = 1;
 
+    // LOAD PACKAGES FROM SERVER
+
     async function loadPackages() {
-      const res = await fetch('/api/packages');
-      allPackages = await res.json();
-      renderPackages();
+      try {
+        const res = await fetch('/api/packages');
+
+        if (!res.ok) {
+          throw new Error('Could not load packages');
+        }
+
+        allPackages = await res.json();
+
+        renderPackages();
+
+      } catch (error) {
+        document.getElementById('pkg-grid').innerHTML =
+          '<p style="color:#f87171;grid-column:span 2;text-align:center;">Unable to load packages. Please refresh the page.</p>';
+      }
     }
+
+    // SWITCH BETWEEN DEVICE PACKAGES
 
     function filterTab(devices, btn) {
+
       activeDevicesTab = devices;
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.remove('active');
+      });
+
       btn.classList.add('active');
+
       selectedPkg = null;
-      document.getElementById('selected-summary').innerText = 'Select a package above';
-      document.getElementById('tab-hint').innerText = devices === 1
-        ? 'Locked to this single device (No sharing)'
-        : 'Connect up to 2 devices (e.g., Phone + Laptop)';
+
+      document.getElementById('selected-summary').innerText =
+        'Select a package above';
+
+      document.getElementById('tab-hint').innerText =
+        devices === 1
+          ? 'Locked to this single device (No sharing)'
+          : 'Connect up to 2 devices (e.g., Phone + Laptop)';
+
       renderPackages();
     }
 
+    // DISPLAY PACKAGES
+
     function renderPackages() {
+
       const grid = document.getElementById('pkg-grid');
-      const filtered = allPackages.filter(p => p.devices === activeDevicesTab);
+
+      const filtered = allPackages.filter(
+        p => Number(p.devices) === activeDevicesTab
+      );
+
+      if (!filtered.length) {
+        grid.innerHTML =
+          '<p style="color:#94a3b8;grid-column:span 2;text-align:center;">No packages available in this category.</p>';
+        return;
+      }
+
       grid.innerHTML = filtered.map(p => `
-        <div class="card ${selectedPkg && selectedPkg.id === p.id ? 'selected' : ''}" onclick="selectPkg('${p.id}')">
-          <div class="dur">${p.label.split('(')[0].trim()}</div>
-          <div class="price"><span>KES</span> ${p.price}</div>
-          <div class="speed-tag">Up to ${p.rateLimit.split('/')[0]}bps</div>
+        <div
+          class="card ${selectedPkg && selectedPkg.id === p.id ? 'selected' : ''}"
+          onclick="selectPkg('${p.id}')"
+        >
+          <div class="dur">
+            ${p.label.split('(')[0].trim()}
+          </div>
+
+          <div class="price">
+            <span>KES</span> ${p.price}
+          </div>
+
+          <div class="speed-tag">
+            Up to ${p.rateLimit.split('/')[0]}bps
+          </div>
         </div>
       `).join('');
     }
 
+    // SELECT PACKAGE
+
     function selectPkg(id) {
-      selectedPkg = allPackages.find(p => p.id === id);
-      document.getElementById('selected-summary').innerText = `${selectedPkg.label.split('(')[0].trim()} • KES ${selectedPkg.price}`;
+
+      selectedPkg = allPackages.find(
+        p => String(p.id) === String(id)
+      );
+
+      if (!selectedPkg) return;
+
+      document.getElementById('selected-summary').innerText =
+        `${selectedPkg.label.split('(')[0].trim()} • KES ${selectedPkg.price}`;
+
       renderPackages();
     }
 
+    // START M-PESA PAYMENT
+
     async function startPayment() {
+
       const phone = document.getElementById('phone').value.trim();
+
       const statusEl = document.getElementById('status');
-      if (!selectedPkg) return statusEl.innerText = 'Please tap a package card first.';
-      if (!phone) return statusEl.innerText = 'Please enter your M-Pesa phone number.';
+
+      if (!selectedPkg) {
+        statusEl.innerText =
+          'Please tap a package card first.';
+        return;
+      }
+
+      if (!phone) {
+        statusEl.innerText =
+          'Please enter your M-Pesa phone number.';
+        return;
+      }
 
       statusEl.style.color = '#fbbf24';
-      statusEl.innerText = 'Sending M-Pesa prompt to your phone...';
 
-      const res = await fetch('/api/pay', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, packageId: selectedPkg.id, mac })
-      });
-      const data = await res.json();
+      statusEl.innerText =
+        'Sending M-Pesa prompt to your phone...';
 
-      if (data.checkoutRequestId) {
-        statusEl.innerText = 'Check your phone & enter your M-Pesa PIN...';
-        pollStatus(data.checkoutRequestId);
-      } else {
+      try {
+
+        const res = await fetch('/api/pay', {
+
+          method: 'POST',
+
+          headers: {
+            'Content-Type': 'application/json'
+          },
+
+          body: JSON.stringify({
+            phone,
+            packageId: selectedPkg.id,
+            mac
+          })
+
+        });
+
+        const data = await res.json();
+
+        if (data.checkoutRequestId) {
+
+          statusEl.innerText =
+            'Check your phone & enter your M-Pesa PIN...';
+
+          pollStatus(data.checkoutRequestId);
+
+        } else {
+
+          statusEl.style.color = '#f87171';
+
+          statusEl.innerText =
+            data.error ||
+            'Could not send M-Pesa prompt. Try again.';
+
+        }
+
+      } catch (error) {
+
         statusEl.style.color = '#f87171';
-        statusEl.innerText = data.error || 'Could not send M-Pesa prompt. Try again.';
+
+        statusEl.innerText =
+          'Payment request failed. Please try again.';
+
       }
     }
 
+    // CHECK PAYMENT STATUS
+
     function pollStatus(checkoutId) {
+
       const statusEl = document.getElementById('status');
+
+      let attempts = 0;
+
       const interval = setInterval(async () => {
-        const res = await fetch(`/api/status/${checkoutId}`);
-        const data = await res.json();
 
-        if (data.status === 'SUCCESS') {
-          clearInterval(interval);
-          statusEl.style.color = '#34d399';
-          statusEl.innerHTML = data.devices === 2
-            ? `Welcome to Galaxy Wi-Fi! Your 2-Device Code is: <b>${data.voucher}</b>. Connecting...`
-            : `Welcome to Galaxy Wi-Fi! Payment received. Connecting...`;
+        attempts++;
 
-          document.getElementById('mk-user').value = data.voucher;
-          document.getElementById('mk-pass').value = data.voucher;
-          setTimeout(() => document.getElementById('mikrotik-login').submit(), 2200);
-        } else if (data.status === 'FAILED') {
+        if (attempts > 40) {
           clearInterval(interval);
-          statusEl.style.color = '#f87171';
-          statusEl.innerText = 'Payment cancelled or failed. Please try again.';
+
+          statusEl.style.color = '#fbbf24';
+
+          statusEl.innerText =
+            'Payment confirmation is taking longer than expected. Please contact support.';
+
+          return;
         }
+
+        try {
+
+          const res = await fetch(
+            `/api/status/${encodeURIComponent(checkoutId)}`
+          );
+
+          const data = await res.json();
+
+          if (data.status === 'SUCCESS') {
+
+            clearInterval(interval);
+
+            statusEl.style.color = '#34d399';
+
+            statusEl.innerHTML = data.devices === 2
+              ? `Welcome to Galaxy Wi-Fi! Your 2-Device Code is: <b>${data.voucher}</b>. Connecting...`
+              : `Welcome to Galaxy Wi-Fi! Payment received. Connecting...`;
+
+            document.getElementById('mk-user').value =
+              data.voucher || '';
+
+            document.getElementById('mk-pass').value =
+              data.voucher || '';
+
+            setTimeout(() => {
+              document.getElementById('mikrotik-login').submit();
+            }, 2200);
+
+          } else if (data.status === 'FAILED') {
+
+            clearInterval(interval);
+
+            statusEl.style.color = '#f87171';
+
+            statusEl.innerText =
+              'Payment cancelled or failed. Please try again.';
+
+          }
+
+        } catch (error) {
+          // Continue checking while the request is temporarily unavailable.
+        }
+
       }, 3000);
     }
 
+    // VOUCHER LOGIN
+
     function loginWithVoucher() {
-      const code = document.getElementById('voucher-input').value.trim().toUpperCase();
-      if (!code) return alert('Please enter your voucher code.');
+
+      const code = document
+        .getElementById('voucher-input')
+        .value.trim()
+        .toUpperCase();
+
+      if (!code) {
+        alert('Please enter your voucher code.');
+        return;
+      }
+
       document.getElementById('mk-user').value = code;
+
       document.getElementById('mk-pass').value = code;
+
       document.getElementById('mikrotik-login').submit();
     }
 
+    // INITIALIZE PAGE
+
     loadPackages();
+
   </script>
+
 </body>
 </html>
