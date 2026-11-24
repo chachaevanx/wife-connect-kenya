@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard | WIFE CONNECT KENYA</title>
+
+    <link rel="stylesheet" href="admin.css">
+</head>
+
+<body>
+
+<div class="app-container">
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar" id="sidebar">
+
+        <div class="brand">
+            <div class="brand-logo">W</div>
+
+            <div>
+                <h2>WIFE CONNECT</h2>
+                <small>KENYA ADMIN</small>
+            </div>
+        </div>
+
+        <nav class="navigation">
+
+            <button class="nav-link active"
+                    data-section="overview">
+                📊 Dashboard
+            </button>
+
+            <button class="nav-link"
+                    data-section="payments">
+                💳 M-Pesa Payments
+            </button>
+
+            <button class="nav-link"
+                    data-section="subscriptions">
+                📡 Subscriptions
+            </button>
+
+            <button class="nav-link"
+                    data-section="packages">
+                📦 Packages
+            </button>
+
+            <button class="nav-link"
+                    data-section="administrators">
+                👥 Administrators
+            </button>
+
+            <button class="nav-link"
+                    data-section="profile">
+                ⚙️ My Profile
+            </button>
+
+        </nav>
+
+        <div class="sidebar-bottom">
+
+            <div class="admin-mini">
+
+                <div class="mini-avatar" id="sidebarAvatar">
+                    A
+                </div>
+
+                <div>
+                    <strong id="sidebarName">Administrator</strong>
+                    <small>System Administrator</small>
+                </div>
+
+            </div>
+
+            <button class="logout-btn" id="logoutButton">
+                ↪ Logout
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="main-content">
+
+        <header class="topbar">
+
+            <button id="menuButton" class="menu-button">
+                ☰
+            </button>
+
+            <div>
+                <h1 id="pageTitle">Dashboard Overview</h1>
+                <p>Welcome to WIFE CONNECT KENYA management.</p>
+            </div>
+
+            <div class="topbar-right">
+
+                <div class="status-indicator">
+                    <span></span> Admin Panel
+                </div>
+
+                <div class="top-avatar" id="topAvatar">
+                    A
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- OVERVIEW -->
+
+        <section class="page-section active"
+                 id="overview">
+
+            <div class="welcome-card">
+
+                <div>
+                    <h2>Welcome Back 👋</h2>
+
+                    <p>
+                        Manage your Wi-Fi billing system
+                        from one central dashboard.
+                    </p>
+                </div>
+
+                <div class="welcome-icon">📡</div>
+
+            </div>
+
+
+            <div class="stats-grid">
+
+                <div class="stat-card">
+                    <div class="stat-icon blue">💰</div>
+                    <p>Total Revenue</p>
+                    <h2 id="totalRevenue">KES 0</h2>
+                    <small>Awaiting transaction integration</small>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon green">👥</div>
+                    <p>Administrators</p>
+                    <h2 id="totalAdmins">2</h2>
+                    <small>Authorized accounts</small>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon orange">⏳</div>
+                    <p>Pending Payments</p>
+                    <h2 id="pendingPayments">0</h2>
+                    <small>Payment monitoring</small>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon purple">📡</div>
+                    <p>Active Subscriptions</p>
+                    <h2 id="activeSubscriptions">0</h2>
+                    <small>Hotspot subscriptions</small>
+                </div>
+
+            </div>
+
+
+            <div class="content-card">
+
+                <div class="card-heading">
+                    <h2>System Information</h2>
+                    <span class="badge">ADMIN</span>
+                </div>
+
+                <div class="information-grid">
+
+                    <div>
+                        <small>Platform</small>
+                        <strong>WIFE CONNECT KENYA</strong>
+                    </div>
+
+                    <div>
+                        <small>Payment Provider</small>
+                        <strong>Safaricom M-Pesa</strong>
+                    </div>
+
+                    <div>
+                        <small>Internet Management</small>
+                        <strong>MikroTik RouterOS</strong>
+                    </div>
+
+                    <div>
+                        <small>Administrator Accounts</small>
+                        <strong>Exactly Two</strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="content-card">
+
+                <h2>Dashboard Notice</h2>
+
+                <p id="dashboardNotice">
+                    Loading dashboard information...
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- PAYMENTS -->
+
+        <section class="page-section" id="payments">
+
+            <div class="section-heading">
+                <h2>M-Pesa Payments</h2>
+                <p>Payment monitoring and transaction records.</p>
+            </div>
+
+            <div class="content-card">
+
+                <div class="empty-state">
+                    <div>💳</div>
+                    <h3>Payment Monitoring</h3>
+
+                    <p>
+                        Payment history and STK transaction records
+                        are not yet connected to persistent storage.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- SUBSCRIPTIONS -->
+
+        <section class="page-section" id="subscriptions">
+
+            <div class="section-heading">
+                <h2>Hotspot Subscriptions</h2>
+
+                <p>
+                    Monitor customer internet subscriptions.
+                </p>
+            </div>
+
+            <div class="content-card">
+
+                <div class="empty-state">
+                    <div>📡</div>
+                    <h3>Subscription Management</h3>
+
+                    <p>
+                        Live MikroTik subscription monitoring
+                        will be connected in a later integration.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- PACKAGES -->
+
+        <section class="page-section" id="packages">
+
+            <div class="section-heading">
+                <h2>Internet Packages</h2>
+
+                <p>
+                    Available Wi-Fi packages and prices.
+                </p>
+            </div>
+
+            <div class="content-card">
+
+                <div class="table-wrapper">
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Package</th>
+                                <th>Duration</th>
+                                <th>Devices</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="packageTable">
+
+                            <tr>
+                                <td colspan="4">
+                                    Loading packages...
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ADMINISTRATORS -->
+
+        <section class="page-section"
+                 id="administrators">
+
+            <div class="section-heading">
+
+                <h2>Administrator Accounts</h2>
+
+                <p>
+                    Manage the two authorized administrators.
+                </p>
+
+            </div>
+
+            <div class="content-card">
+
+                <div class="table-wrapper">
+
+                    <table>
+
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="adminTable">
+
+                            <tr>
+                                <td colspan="3">
+                                    Loading administrators...
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- PROFILE -->
+
+        <section class="page-section" id="profile">
+
+            <div class="section-heading">
+                <h2>My Profile</h2>
+                <p>Update your administrator information.</p>
+            </div>
+
+
+            <div class="content-card">
+
+                <div class="profile-header">
+
+                    <img
+                        src="avatar-placeholder.svg"
+                        id="profileImage"
+                        alt="Administrator profile"
+                    >
+
+                    <div>
+
+                        <h3 id="profileDisplayName">
+                            Administrator
+                        </h3>
+
+                        <p>System Administrator</p>
+
+                        <input
+                            type="file"
+                            id="pictureInput"
+                            accept="image/jpeg,image/png,image/webp"
+                            hidden
+                        >
+
+                        <button
+                            type="button"
+                            class="secondary-btn"
+                            id="uploadPictureButton"
+                        >
+                            Change Picture
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <form id="profileForm">
+
+                    <label>Full Name</label>
+
+                    <input
+                        type="text"
+                        id="fullName"
+                        required
+                    >
+
+                    <label>Email Address</label>
+
+                    <input
+                        type="email"
+                        id="profileEmail"
+                        required
+                    >
+
+                    <label>Phone Number</label>
+
+                    <input
+                        type="tel"
+                        id="profilePhone"
+                    >
+
+                    <button type="submit" class="primary-btn">
+                        Save Profile
+                    </button>
+
+                </form>
+
+                <p id="profileMessage" class="form-message"></p>
+
+            </div>
+
+
+            <!-- PASSWORD -->
+
+            <div class="content-card">
+
+                <h2>Change Password 🔐</h2>
+
+                <form id="passwordForm">
+
+                    <label>Current Password</label>
+
+                    <input
+                        type="password"
+                        id="currentPassword"
+                        required
+                    >
+
+                    <label>New Password</label>
+
+                    <input
+                        type="password"
+                        id="newPassword"
+                        minlength="12"
+                        required
+                    >
+
+                    <label>Confirm New Password</label>
+
+                    <input
+                        type="password"
+                        id="confirmPassword"
+                        minlength="12"
+                        required
+                    >
+
+                    <button type="submit" class="primary-btn">
+                        Update Password
+                    </button>
+
+                </form>
+
+                <p id="passwordMessage" class="form-message"></p>
+
+            </div>
+
+        </section>
+
+
+        <footer class="footer">
+
+            © 2026 WIFE CONNECT KENYA.
+
+            <br>
+
+            Secure Administrator Management System.
+
+        </footer>
+
+    </main>
+
+</div>
+
+
+<script src="dashboard.js"></script>
+
+</body>
+</html>
