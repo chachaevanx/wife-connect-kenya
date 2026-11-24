@@ -31,11 +31,11 @@ async function initiateSTKPush({ phone, amount, accountRef, description }) {
       `${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`
     ).toString('base64');
 
-    const payload = {
+   const payload = {
       BusinessShortCode: process.env.MPESA_SHORTCODE,
       Password: password,
       Timestamp: timestamp,
-      TransactionType: 'CustomerPayBillOnline',
+      TransactionType: 'CustomerBuyGoodsOnline',
       Amount: Math.round(amount),
       PartyA: formatPhone(phone),
       PartyB: process.env.MPESA_SHORTCODE,
@@ -43,6 +43,7 @@ async function initiateSTKPush({ phone, amount, accountRef, description }) {
       CallBackURL: `${(process.env.BASE_URL || 'https://wife-connect-kenya-1.onrender.com').replace(/\/+$/, '')}/api/mpesa/callback`,
       AccountReference: accountRef,
       TransactionDesc: description
+    }; 
     };
 
     const res = await axios.post(`${BASE_MPESA_URL}/mpesa/stkpush/v1/processrequest`, payload, {
