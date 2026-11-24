@@ -1,195 +1,240 @@
-```javascript
 const axios = require('axios');
 
-// Safaricom API environment
-const BASE_MPESA_URL =
-  process.env.MPESA_ENV === 'production'
+// ==========================================
+// M-PESA CONFIGURATION
+// ==========================================
+
+const MPESA_URL = (
+    process.env.MPESA_URL || 'https://sandbox.safaricom.co.ke'
+).trim().replace(/\/+$/, '');
+
+const BASE_URL = (
+    process.env.BASE_URL || 'https://wife-connect-kenya-1.onrender.com'
+).trim().replace(/\/+$/, '');
+
+const MPESA_ENV = (process.env.MPESA_ENV || 'sandbox').toLowerCase();
+
+const API_BASE_URL = MPESA_ENV === 'production'
     ? 'https://api.safaricom.co.ke'
-    : 'https://sandbox.safaricom.co.ke';
+    : MPESA_URL;
 
-// Generate OAuth access token
-async function getAccessToken() {
-  const consumerKey = process.env.MPESA_CONSUMER_KEY;
-  const consumerSecret = process.env.MPESA_CONSUMER_SECRET;
+const CALLBACK_URL = `${BASE_URL}/api/mpesa/callback`;
 
-  if (!consumerKey || !consumerSecret) {
-    throw new Error('Missing M-Pesa Consumer Key or Consumer Secret');
-  }
+const SHORTCODE = process.env.MPESA_SHORTCODE;
+const TILL_NUMBER = process.env.MPESA_TILL_NUMBER || SHORTCODE;
+const PASSKEY = process.env.MPESA_PASSKEY;
 
-  const auth = Buffer.from(
-    `${consumerKey}:${consumerSecret}`
-  ).toString('base64');
+// ==========================================
+// VALIDATE CONFIGURATION
+// ==========================================
 
-  const response = await axios.get(
-    `${BASE_MPESA_URL}/oauth/v1/generate?grant_type=client_credentials`,
-    {
-      headers: {
-        Authorization: `Basic ${auth}`
-      },
-      timeout: 15000
+function validateConfig() {
+    const required = [
+        'MPESA_CONSUMER_KEY',
+        'MPESA_CONSUMER_SECRET',
+        'MPESA_SHORTCODE',
+        'MPESA_PASSKEY'
+    ];
+
+    for (const variable of required) {
+        if (!process.env[variable]) {
+            throw new Error(`Missing environment variable: ${variable}`);
+        }
     }
-  );
 
-  return response.data.access_token;
+    if (!TILL_NUMBER) {
+        throw new Error('Missing MPESA_TILL_NUMBER');
+    }
+
+    try {
+        const apiUrl = new URL(API_BASE_URL);
+        const callbackUrl = new URL(CALLBACK_URL);
+
+        if (apiUrl.protocol !== 'https:' || callbackUrl.protocol !== 'https:') {
+            throw new Error('M-Pesa URLs must use HTTPS');
+        }
+    } catch (error) {
+        throw new Error(`Invalid M-Pesa URL: ${error.message}`);
+    }
 }
 
-// Format Kenyan phone numbers
-function formatPhone(phone) {
-  let clean = String(phone || '')
-    .trim()
-    .replace(/\s+/g, '')
-    .replace(/^\+/, '');
+// ==========================================
+// GENERATE NAIROBI TIMESTAMP
+// ==========================================
 
-  if (clean.startsWith('0')) {
-    clean = '254' + clean.slice(1);
-  } else if (clean.startsWith('7') || clean.startsWith('1')) {
-    clean = '254' + clean;
-  }
-
-  if (!/^254[17]\d{8}$/.test(clean)) {
-    throw new Error('Invalid Kenyan phone number');
-  }
-
-  return clean;
-}
-
-// Generate timestamp in Kenya time
 function generateTimestamp() {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Africa/Nairobi',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23'
-  }).formatToParts(new Date());
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Africa/Nairobi',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23'
+    }).formatToParts(new Date());
 
-  const values = Object.fromEntries(
-    parts.map(part => [part.type, part.value])
-  );
+    const values = {};
 
-  return (
-    values.year +
-    values.month +
-    values.day +
-    values.hour +
-    values.minute +
-    values.second
-  );
+    for (const part of parts) {
+        values[part.type] = part.value;
+    }
+
+    return (
+        values.year +
+        values.month +
+        values.day +
+        values.hour +
+        values.minute +
+        values.second
+    );
 }
 
-// Initiate STK Push
-async function initiateSTKPush({
-  phone,
-  amount,
-  accountRef,
-  description
-}) {
-  try {
-    const shortcode = process.env.MPESA_SHORTCODE;
-    const tillNumber = process.env.MPESA_TILL_NUMBER;
-    const passkey = process.env.MPESA_PASSKEY;
+// ==========================================
+// FORMAT KENYAN PHONE NUMBER
+// ==========================================
 
-    if (!shortcode || !tillNumber || !passkey) {
-      throw new Error('Missing M-Pesa shortcode, Till number or Passkey');
+function formatPhone(phone) {
+    let clean = String(phone).replace(/\D/g, '');
+
+    if (clean.startsWith('0')) {
+        clean = '254' + clean.substring(1);
+    } else if (clean.startsWith('7') || clean.startsWith('1')) {
+        clean = '254' + clean;
     }
 
-    const numericAmount = Number(amount);
-
-    if (!Number.isFinite(numericAmount) || numericAmount < 1) {
-      throw new Error('Invalid payment amount');
+    if (!/^254[17]\d{8}$/.test(clean)) {
+        throw new Error('Invalid phone number. Use 07XXXXXXXX or 2547XXXXXXXX.');
     }
 
-    const customerPhone = formatPhone(phone);
+    return clean;
+}
 
-    const token = await getAccessToken();
+// ==========================================
+// GET SAFARICOM ACCESS TOKEN
+// ==========================================
 
-    const timestamp = generateTimestamp();
+async function getAccessToken() {
+    validateConfig();
 
-    // Generate STK Push password
-    const password = Buffer.from(
-      `${shortcode}${passkey}${timestamp}`
+    const credentials = Buffer.from(
+        `${process.env.MPESA_CONSUMER_KEY}:${process.env.MPESA_CONSUMER_SECRET}`
     ).toString('base64');
 
-    // Callback URL
-    const callbackBase =
-      process.env.BASE_URL ||
-      process.env.MPESA_URL ||
-      'https://wife-connect-kenya-1.onrender.com';
+    try {
+        const response = await axios.get(
+            `${API_BASE_URL}/oauth/v1/generate?grant_type=client_credentials`,
+            {
+                headers: {
+                    Authorization: `Basic ${credentials}`
+                },
+                timeout: 20000
+            }
+        );
 
-    const callbackURL =
-      `${callbackBase.trim().replace(/\/+$/, '')}/api/mpesa/callback`;
+        if (!response.data.access_token) {
+            throw new Error('Safaricom did not return an access token.');
+        }
 
-    // STK Push request
-    const payload = {
-      BusinessShortCode: shortcode,
-      Password: password,
-      Timestamp: timestamp,
+        return response.data.access_token;
 
-      TransactionType:
-        process.env.MPESA_TRANSACTION_TYPE ||
-        'CustomerBuyGoodsOnline',
+    } catch (error) {
+        console.error(
+            'M-PESA TOKEN ERROR:',
+            error.response?.data || error.message
+        );
 
-      Amount: Math.round(numericAmount),
-
-      PartyA: customerPhone,
-      PartyB: tillNumber,
-      PhoneNumber: customerPhone,
-
-      CallBackURL: callbackURL,
-
-      AccountReference: String(accountRef || 'WIFI PAYMENT')
-        .slice(0, 12),
-
-      TransactionDesc: String(description || 'WiFi Payment')
-        .slice(0, 13)
-    };
-
-    console.log('Initiating M-Pesa STK Push');
-    console.log('Environment:', process.env.MPESA_ENV);
-    console.log('Shortcode configured:', Boolean(shortcode));
-    console.log('Till configured:', Boolean(tillNumber));
-    console.log('Customer phone:', customerPhone);
-    console.log('Amount:', payload.Amount);
-    console.log('Callback URL:', callbackURL);
-
-    const response = await axios.post(
-      `${BASE_MPESA_URL}/mpesa/stkpush/v1/processrequest`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 30000
-      }
-    );
-
-    console.log('STK PUSH RESPONSE:', response.data);
-
-    return response.data;
-
-  } catch (error) {
-    console.error('========== MPESA ERROR ==========');
-    console.error('HTTP STATUS:', error.response?.status);
-
-    console.error(
-      'SAFARICOM RESPONSE:',
-      JSON.stringify(error.response?.data || {}, null, 2)
-    );
-
-    console.error('ERROR MESSAGE:', error.message);
-    console.error('=================================');
-
-    throw error;
-  }
+        throw new Error('Unable to obtain M-Pesa access token.');
+    }
 }
 
+// ==========================================
+// INITIATE STK PUSH
+// ==========================================
+
+async function initiateSTKPush({
+    phone,
+    amount,
+    accountRef = 'WIFI-PAYMENT',
+    description = 'WiFi Payment'
+}) {
+    try {
+        validateConfig();
+
+        const formattedPhone = formatPhone(phone);
+        const paymentAmount = Math.round(Number(amount));
+
+        if (!Number.isFinite(paymentAmount) || paymentAmount < 1) {
+            throw new Error('Payment amount must be at least KSh 1.');
+        }
+
+        const token = await getAccessToken();
+
+        const timestamp = generateTimestamp();
+
+        const password = Buffer.from(
+            `${SHORTCODE}${PASSKEY}${timestamp}`
+        ).toString('base64');
+
+        const payload = {
+            BusinessShortCode: SHORTCODE,
+            Password: password,
+            Timestamp: timestamp,
+
+            TransactionType:
+                process.env.MPESA_TRANSACTION_TYPE ||
+                'CustomerBuyGoodsOnline',
+
+            Amount: paymentAmount,
+            PartyA: formattedPhone,
+            PartyB: TILL_NUMBER,
+            PhoneNumber: formattedPhone,
+
+            CallBackURL: CALLBACK_URL,
+
+            AccountReference: String(accountRef).substring(0, 12),
+            TransactionDesc: String(description).substring(0, 13)
+        };
+
+        console.log('Initiating M-Pesa STK Push...');
+        console.log('Phone:', formattedPhone);
+        console.log('Amount:', paymentAmount);
+        console.log('Callback configured:', CALLBACK_URL);
+
+        const response = await axios.post(
+            `${API_BASE_URL}/mpesa/stkpush/v1/processrequest`,
+            payload,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 30000
+            }
+        );
+
+        console.log('STK PUSH RESPONSE:', response.data);
+
+        return response.data;
+
+    } catch (error) {
+        console.error('STK PUSH FAILED');
+        console.error('HTTP STATUS:', error.response?.status);
+        console.error(
+            'SAFARICOM RESPONSE:',
+            error.response?.data || error.message
+        );
+
+        throw error;
+    }
+}
+
+// ==========================================
+// EXPORT FUNCTIONS
+// ==========================================
+
 module.exports = {
-  initiateSTKPush,
-  formatPhone,
-  getAccessToken
+    getAccessToken,
+    initiateSTKPush,
+    formatPhone
 };
-```
