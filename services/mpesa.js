@@ -35,12 +35,12 @@ async function initiateSTKPush({ phone, amount, accountRef, description }) {
     BusinessShortCode: process.env.MPESA_SHORTCODE,
     Password: password,
     Timestamp: timestamp,
-    TransactionType: 'CustomerBuyGoodsOnline',
+  TransactionType: 'CustomerPayBillOnline',
     Amount: Math.round(amount),
     PartyA: formatPhone(phone),
-    PartyB: process.env.MPESA_TILL_NUMBER,
+    PartyB: process.env.MPESA_SHORTCODE,
     PhoneNumber: formatPhone(phone),
-    CallBackURL: `${process.env.BASE_URL}/api/mpesa/callback`,
+   CallBackURL: `${(process.env.BASE_URL || 'https://wife-connect-kenya-1.onrender.com').replace(/\/+$/, '')}/api/mpesa/callback`,
     AccountReference: accountRef,
     TransactionDesc: description
   };
