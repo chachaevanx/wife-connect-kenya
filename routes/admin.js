@@ -1,591 +1,231 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 
-module.exports = function (pool) {
+const router = express.Router();
 
-    const router = express.Router();
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
 
-    const JWT_SECRET = process.env.ADMIN_JWT_SECRET;
-
-    // =====================================
-    // IMAGE UPLOAD CONFIGURATION
-    // =====================================
-
-    const storage = multer.memoryStorage();
-
-    const upload = multer({
-        storage,
-        limits: {
-            fileSize: 2 * 1024 * 1024
-        },
-        fileFilter: (req, file, cb) => {
-
-            const allowed = [
-                'image/jpeg',
-                'image/png',
-                'image/webp'
-            ];
-
-            if (!allowed.includes(file.mimetype)) {
-                return cb(
-                    new Error('Only JPG, PNG and WEBP images are allowed')
-                );
-            }
-
+        if (allowed.includes(file.mimetype)) {
             cb(null, true);
+        } else {
+            cb(new Error('Only JPG, PNG and WEBP images are allowed.'));
         }
-    });
-
-    // =====================================
-    // INITIALIZE TWO ADMINISTRATORS
-    // =====================================
-
-    let initializationPromise;
-
-    async function initializeAdmins() {
-
-        const admins = [
-            {
-                slot: 1,
-                name: process.env.ADMIN1_NAME,
-                email: process.env.ADMIN1_EMAIL,
-                password: process.env.ADMIN1_PASSWORD
-            },
-            {
-                slot: 2,
-                name: process.env.ADMIN2_NAME,
-                email: process.env.ADMIN2_EMAIL,
-                password: process.env.ADMIN2_PASSWORD
-            }
-        ];
-
-        for (const admin of admins) {
-
-            if (
-                !admin.name ||
-                !admin.email ||
-                !admin.password ||
-                admin.password.length < 12
-            ) {
-                throw new Error(
-                    `Admin slot ${admin.slot} has missing details or a password shorter than 12 characters`
-                );
-            }
-
-        }
-
-        const result = await pool.query(
-            'SELECT COUNT(*) FROM admin_users'
-        );
-
-        const count = Number(result.rows[0].count);
-
-        if (count === 0) {
-
-            for (const admin of admins) {
-
-                const hash = await bcrypt.hash(
-                    admin.password,
-                    12
-                );
-
-                await pool.query(
-                    `INSERT INTO admin_users
-                    (slot, full_name, email, password_hash)
-                    VALUES ($1, $2, $3, $4)`,
-                    [
-                        admin.slot,
-                        admin.name,
-                        admin.email.toLowerCase(),
-                        hash
-                    ]
-                );
-
-            }
-
-            console.log('Two administrator accounts created.');
-
-        } else if (count !== 2) {
-
-            throw new Error(
-                'Admin database must contain exactly two administrator accounts. Resolve the database records before starting.'
-            );
-
-        }
-
     }
+});
 
-    function ensureInitialized() {
+const JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 
-        if (!initializationPromise) {
-            initializationPromise = initializeAdmins();
-        }
-
-        return initializationPromise;
-
+const admins = [
+    {
+        slot: 1,
+        name: process.env.ADMIN1_NAME || 'Administrator 1',
+        email: process.env.ADMIN1_EMAIL || '',
+        password: process.env.ADMIN1_PASSWORD || '',
+        phone: '',
+        picture: null,
+        pictureType: null
+    },
+    {
+        slot: 2,
+        name: process.env.ADMIN2_NAME || 'Administrator 2',
+        email: process.env.ADMIN2_EMAIL || '',
+        password: process.env.ADMIN2_PASSWORD || '',
+        phone: '',
+        picture: null,
+        pictureType: null
     }
+];
 
-    // =====================================
-    // AUTHENTICATION MIDDLEWARE
-    // =====================================
+function authenticate(req, res, next) {
+    try {
+        const token = req.cookies?.wc_admin;
 
-    async function authenticate(req, res, next) {
-
-        try {
-
-            await ensureInitialized();
-
-            const token = req.cookies?.wc_admin;
-
-            if (!token) {
-                return res.status(401).json({
-                    error: 'Please log in.'
-                });
-            }
-
-            const decoded = jwt.verify(
-                token,
-                JWT_SECRET
-            );
-
-            const result = await pool.query(
-                `SELECT id, full_name, email, phone
-                 FROM admin_users
-                 WHERE id = $1`,
-                [decoded.id]
-            );
-
-            if (result.rows.length === 0) {
-                return res.status(401).json({
-                    error: 'Administrator account not found.'
-                });
-            }
-
-            req.admin = result.rows[0];
-
-            next();
-
-        } catch (error) {
-
+        if (!token) {
             return res.status(401).json({
-                error: 'Session expired. Please log in again.'
+                error: 'Please log in first.'
             });
-
         }
 
+        req.admin = jwt.verify(token, JWT_SECRET);
+        next();
+
+    } catch {
+        res.status(401).json({
+            error: 'Session expired. Please log in again.'
+        });
+    }
+}
+
+// ADMIN LOGIN
+router.post('/login', (req, res) => {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
+
+    const admin = admins.find(a =>
+        a.email.toLowerCase() === email &&
+        a.password === password
+    );
+
+    if (!admin || !admin.email || !admin.password) {
+        return res.status(401).json({
+            error: 'Incorrect email or password.'
+        });
     }
 
-    // =====================================
-    // ADMIN LOGIN
-    // =====================================
+    const token = jwt.sign(
+        {
+            slot: admin.slot,
+            email: admin.email
+        },
+        JWT_SECRET,
+        { expiresIn: '8h' }
+    );
 
-    router.post('/login', async (req, res) => {
-
-        try {
-
-            await ensureInitialized();
-
-            const { email, password } = req.body;
-
-            if (!email || !password) {
-                return res.status(400).json({
-                    error: 'Email and password are required.'
-                });
-            }
-
-            const result = await pool.query(
-                `SELECT *
-                 FROM admin_users
-                 WHERE LOWER(email) = LOWER($1)`,
-                [email.trim()]
-            );
-
-            if (result.rows.length !== 1) {
-                return res.status(401).json({
-                    error: 'Invalid email or password.'
-                });
-            }
-
-            const admin = result.rows[0];
-
-            const validPassword = await bcrypt.compare(
-                password,
-                admin.password_hash
-            );
-
-            if (!validPassword) {
-                return res.status(401).json({
-                    error: 'Invalid email or password.'
-                });
-            }
-
-            const token = jwt.sign(
-                {
-                    id: admin.id,
-                    slot: admin.slot
-                },
-                JWT_SECRET,
-                {
-                    expiresIn: '8h'
-                }
-            );
-
-            res.cookie('wc_admin', token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 8 * 60 * 60 * 1000,
-                path: '/'
-            });
-
-            res.json({
-                success: true,
-                message: 'Login successful.',
-                admin: {
-                    name: admin.full_name,
-                    email: admin.email
-                }
-            });
-
-        } catch (error) {
-
-            console.error('Admin login:', error.message);
-
-            res.status(500).json({
-                error: 'Login service unavailable.'
-            });
-
-        }
-
+    res.cookie('wc_admin', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 8 * 60 * 60 * 1000
     });
 
-    // =====================================
-    // ADMIN LOGOUT
-    // =====================================
+    res.json({
+        success: true,
+        message: 'Login successful.'
+    });
+});
 
-    router.post('/logout', (req, res) => {
+// ADMIN LOGOUT
+router.post('/logout', (req, res) => {
+    res.clearCookie('wc_admin');
+    res.json({ success: true });
+});
 
-        res.clearCookie('wc_admin', {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            path: '/'
+// CURRENT ADMIN
+router.get('/me', authenticate, (req, res) => {
+    const admin = admins.find(a => a.slot === req.admin.slot);
+
+    if (!admin) {
+        return res.status(404).json({ error: 'Admin not found.' });
+    }
+
+    res.json({
+        slot: admin.slot,
+        name: admin.name,
+        email: admin.email,
+        phone: admin.phone
+    });
+});
+
+// UPDATE PROFILE
+router.put('/profile', authenticate, (req, res) => {
+    const admin = admins.find(a => a.slot === req.admin.slot);
+
+    if (!admin) {
+        return res.status(404).json({ error: 'Admin not found.' });
+    }
+
+    const { name, email, phone } = req.body;
+
+    if (email && admins.some(a =>
+        a.slot !== admin.slot &&
+        a.email.toLowerCase() === String(email).toLowerCase()
+    )) {
+        return res.status(400).json({
+            error: 'That email is already being used.'
         });
+    }
+
+    if (name) admin.name = String(name).trim();
+    if (email) admin.email = String(email).trim();
+    if (phone !== undefined) admin.phone = String(phone).trim();
+
+    res.json({
+        success: true,
+        message: 'Profile updated.'
+    });
+});
+
+// PROFILE PICTURE UPLOAD
+router.post(
+    '/profile-picture',
+    authenticate,
+    upload.single('picture'),
+    (req, res) => {
+        if (!req.file) {
+            return res.status(400).json({
+                error: 'Please select an image.'
+            });
+        }
+
+        const admin = admins.find(a => a.slot === req.admin.slot);
+
+        admin.picture = req.file.buffer;
+        admin.pictureType = req.file.mimetype;
 
         res.json({
             success: true,
-            message: 'Logged out successfully.'
+            message: 'Profile picture updated.'
         });
+    }
+);
 
+// GET PROFILE PICTURE
+router.get('/profile-picture', authenticate, (req, res) => {
+    const admin = admins.find(a => a.slot === req.admin.slot);
+
+    if (!admin || !admin.picture) {
+        return res.status(404).send('No profile picture.');
+    }
+
+    res.set('Content-Type', admin.pictureType);
+    res.send(admin.picture);
+});
+
+// CHANGE PASSWORD
+router.post('/change-password', authenticate, (req, res) => {
+    const admin = admins.find(a => a.slot === req.admin.slot);
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (currentPassword !== admin.password) {
+        return res.status(400).json({
+            error: 'Current password is incorrect.'
+        });
+    }
+
+    if (!newPassword || String(newPassword).length < 6) {
+        return res.status(400).json({
+            error: 'New password must contain at least 6 characters.'
+        });
+    }
+
+    admin.password = String(newPassword);
+
+    res.json({
+        success: true,
+        message: 'Password changed until the next server restart.'
     });
+});
 
-    // =====================================
-    // CURRENT ADMIN PROFILE
-    // =====================================
-
-    router.get('/me', authenticate, async (req, res) => {
-
-        try {
-
-            const result = await pool.query(
-                `SELECT id, full_name, email, phone,
-                CASE WHEN profile_image IS NULL
-                THEN false ELSE true END AS has_image
-                FROM admin_users
-                WHERE id = $1`,
-                [req.admin.id]
-            );
-
-            res.json(result.rows[0]);
-
-        } catch (error) {
-
-            res.status(500).json({
-                error: 'Unable to load profile.'
-            });
-
-        }
-
+// DASHBOARD OVERVIEW
+router.get('/overview', authenticate, (req, res) => {
+    res.json({
+        administrators: admins.map(a => ({
+            slot: a.slot,
+            name: a.name,
+            email: a.email
+        })),
+        administratorCount: 2,
+        revenue: 0,
+        pendingPayments: 0,
+        activeSubscriptions: 0,
+        notice: 'Live transaction statistics are not connected yet.'
     });
+});
 
-    // =====================================
-    // UPDATE ADMIN PROFILE
-    // =====================================
-
-    router.put('/profile', authenticate, async (req, res) => {
-
-        try {
-
-            const {
-                full_name,
-                email,
-                phone
-            } = req.body;
-
-            if (!full_name || !email) {
-                return res.status(400).json({
-                    error: 'Name and email are required.'
-                });
-            }
-
-            const result = await pool.query(
-                `UPDATE admin_users
-                 SET full_name = $1,
-                     email = $2,
-                     phone = $3,
-                     updated_at = CURRENT_TIMESTAMP
-                 WHERE id = $4
-                 RETURNING id, full_name, email, phone`,
-                [
-                    full_name.trim(),
-                    email.trim().toLowerCase(),
-                    phone || null,
-                    req.admin.id
-                ]
-            );
-
-            res.json({
-                success: true,
-                admin: result.rows[0]
-            });
-
-        } catch (error) {
-
-            if (error.code === '23505') {
-                return res.status(409).json({
-                    error: 'That email is already in use.'
-                });
-            }
-
-            console.error(error.message);
-
-            res.status(500).json({
-                error: 'Profile update failed.'
-            });
-
-        }
-
-    });
-
-    // =====================================
-    // PROFILE PICTURE
-    // =====================================
-
-    router.post(
-        '/profile-picture',
-        authenticate,
-        upload.single('picture'),
-        async (req, res) => {
-
-            try {
-
-                if (!req.file) {
-                    return res.status(400).json({
-                        error: 'Select a valid image.'
-                    });
-                }
-
-                await pool.query(
-                    `UPDATE admin_users
-                     SET profile_image = $1,
-                         profile_image_type = $2,
-                         updated_at = CURRENT_TIMESTAMP
-                     WHERE id = $3`,
-                    [
-                        req.file.buffer,
-                        req.file.mimetype,
-                        req.admin.id
-                    ]
-                );
-
-                res.json({
-                    success: true,
-                    message: 'Profile picture updated.'
-                });
-
-            } catch (error) {
-
-                res.status(500).json({
-                    error: 'Image upload failed.'
-                });
-
-            }
-
-        }
-    );
-
-    router.get(
-        '/profile-picture',
-        authenticate,
-        async (req, res) => {
-
-            try {
-
-                const result = await pool.query(
-                    `SELECT profile_image, profile_image_type
-                     FROM admin_users
-                     WHERE id = $1`,
-                    [req.admin.id]
-                );
-
-                const admin = result.rows[0];
-
-                if (!admin || !admin.profile_image) {
-                    return res.sendStatus(404);
-                }
-
-                res.setHeader(
-                    'Content-Type',
-                    admin.profile_image_type
-                );
-
-                res.setHeader(
-                    'Cache-Control',
-                    'no-store'
-                );
-
-                res.send(admin.profile_image);
-
-            } catch (error) {
-
-                res.status(500).json({
-                    error: 'Unable to load image.'
-                });
-
-            }
-
-        }
-    );
-
-    // =====================================
-    // CHANGE PASSWORD
-    // =====================================
-
-    router.post(
-        '/change-password',
-        authenticate,
-        async (req, res) => {
-
-            try {
-
-                const {
-                    currentPassword,
-                    newPassword
-                } = req.body;
-
-                if (
-                    !currentPassword ||
-                    !newPassword ||
-                    newPassword.length < 12
-                ) {
-                    return res.status(400).json({
-                        error: 'Enter your current password and a new password of at least 12 characters.'
-                    });
-                }
-
-                const result = await pool.query(
-                    `SELECT password_hash
-                     FROM admin_users
-                     WHERE id = $1`,
-                    [req.admin.id]
-                );
-
-                const valid = await bcrypt.compare(
-                    currentPassword,
-                    result.rows[0].password_hash
-                );
-
-                if (!valid) {
-                    return res.status(400).json({
-                        error: 'Current password is incorrect.'
-                    });
-                }
-
-                const hash = await bcrypt.hash(
-                    newPassword,
-                    12
-                );
-
-                await pool.query(
-                    `UPDATE admin_users
-                     SET password_hash = $1,
-                         updated_at = CURRENT_TIMESTAMP
-                     WHERE id = $2`,
-                    [hash, req.admin.id]
-                );
-
-                res.clearCookie('wc_admin', {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: 'strict',
-                    path: '/'
-                });
-
-                res.json({
-                    success: true,
-                    message: 'Password changed. Please log in again.'
-                });
-
-            } catch (error) {
-
-                console.error(error.message);
-
-                res.status(500).json({
-                    error: 'Password change failed.'
-                });
-
-            }
-
-        }
-    );
-
-    // =====================================
-    // DASHBOARD OVERVIEW
-    // =====================================
-
-    router.get('/overview', authenticate, async (req, res) => {
-
-        try {
-
-            const result = await pool.query(
-                `SELECT id, full_name, email, phone
-                 FROM admin_users
-                 ORDER BY slot`
-            );
-
-            res.json({
-
-                administrators: result.rows,
-
-                administratorCount: result.rows.length,
-
-                transactions: {
-                    revenue: 0,
-                    successful: 0,
-                    pending: 0
-                },
-
-                subscriptions: {
-                    active: 0,
-                    expired: 0
-                },
-
-                notice: 'Payment and subscription statistics require persistent transaction storage. They are not yet connected to this dashboard.'
-
-            });
-
-        } catch (error) {
-
-            res.status(500).json({
-                error: 'Unable to load dashboard.'
-            });
-
-        }
-
-    });
-
-    return router;
-
-};
+module.exports = router;
