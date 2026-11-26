@@ -1,9 +1,13 @@
+```javascript
 require('dotenv').config();
 
 const express = require('express');
 const path = require('path');
 const cron = require('node-cron');
 const cookieParser = require('cookie-parser');
+const crypto = require('crypto');
+const sqlite3 = require('sqlite3').verbose();
+const { open } = require('sqlite');
 
 const PACKAGES = require('./packages');
 
@@ -34,35 +38,122 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ======================================
-// ADMIN CONFIGURATION
+// SECURITY CONFIGURATION
 // ======================================
 
-if (!process.env.ADMIN_JWT_SECRET ||
-    process.env.ADMIN_JWT_SECRET.length < 32) {
+if (
+    !process.env.ADMIN_JWT_SECRET ||
+    process.env.ADMIN_JWT_SECRET.length < 32
+) {
     throw new Error(
         'ADMIN_JWT_SECRET must contain at least 32 characters.'
     );
 }
 
+// ======================================
+// DATABASE CONFIGURATION
+// ======================================
+
+let db;
+
+async function initializeDatabase() {
+
+    const databasePath =
+        process.env.DATABASE_PATH ||
+        path.join(__dirname, 'galex-billing.sqlite');
+
+    db = await open({
+        filename: databasePath,
+        driver: sqlite3.Database
+    });
+
+    await db.exec(`
+        CREATE TABLE IF NOT EXISTS transactions (
+            checkout_id TEXT PRIMARY KEY,
+            phone TEXT NOT NULL,
+            package_id TEXT NOT NULL,
+            package_label TEXT,
+            amount INTEGER NOT NULL,
+            mac TEXT,
+            status TEXT NOT NULL,
+            voucher TEXT UNIQUE,
+            mpesa_receipt TEXT,
+            paid_at INTEGER,
+            expires_at INTEGER,
+            devices INTEGER DEFAULT 1,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            phone TEXT NOT NULL,
+            package_id TEXT NOT NULL,
+            package_label TEXT,
+            amount INTEGER NOT NULL,
+            devices INTEGER DEFAULT 1,
+            paid_at INTEGER NOT NULL,
+            expires_at INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            created_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_subscription_expiry
+        ON subscriptions(status, expires_at);
+    `);
+
+    console.log('Billing database initialized.');
+
+}
+
+// ======================================
+// ADMIN ROUTES
+// ======================================
+
 app.use('/api/admin', adminRoutes);
 
 // ======================================
-// TRANSACTION STORAGE
+// HELPER FUNCTIONS
 // ======================================
 
-// These records are temporary.
-// They will be lost when the server restarts.
+function generateVoucher() {
 
-const pendingTransactions = new Map();
+    return crypto
+        .randomBytes(5)
+        .toString('hex')
+        .toUpperCase();
 
-const activeSubscriptions = [];
+}
+
+function getPackage(packageId) {
+
+    return PACKAGES.find(
+        item => item.id === packageId
+    );
+
+}
+
+function getPackageDuration(pkg) {
+
+    const hours = Number(pkg.hours);
+
+    if (!Number.isFinite(hours) || hours <= 0) {
+        throw new Error('Invalid package duration.');
+    }
+
+    return hours * 60 * 60 * 1000;
+
+}
 
 // ======================================
 // CUSTOMER PACKAGES
 // ======================================
 
 app.get('/api/packages', (req, res) => {
+
     res.json(PACKAGES);
+
 });
 
 // ======================================
@@ -76,19 +167,21 @@ app.post('/api/pay', async (req, res) => {
         const { phone, packageId, mac } = req.body;
 
         if (!phone || !packageId) {
+
             return res.status(400).json({
                 error: 'Phone number and package are required.'
             });
+
         }
 
-        const pkg = PACKAGES.find(
-            p => p.id === packageId
-        );
+        const pkg = getPackage(packageId);
 
         if (!pkg) {
+
             return res.status(400).json({
                 error: 'Invalid package selected.'
             });
+
         }
 
         const formattedPhone = formatPhone(phone);
@@ -106,29 +199,48 @@ app.post('/api/pay', async (req, res) => {
         });
 
         if (!stkRes.CheckoutRequestID) {
+
             throw new Error(
-                'Safaricom did not return a CheckoutRequestID.'
+                'Missing M-Pesa CheckoutRequestID.'
             );
+
         }
 
-        pendingTransactions.set(
-            stkRes.CheckoutRequestID,
-            {
-                phone: formattedPhone,
-                pkg,
-                mac: mac || '',
-                status: 'PENDING',
-                voucher: null,
-                amount: pkg.price,
-                createdAt: Date.now()
-            }
+        const now = Date.now();
+
+        await db.run(
+            `INSERT INTO transactions (
+                checkout_id,
+                phone,
+                package_id,
+                package_label,
+                amount,
+                mac,
+                status,
+                devices,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                stkRes.CheckoutRequestID,
+                formattedPhone,
+                pkg.id,
+                pkg.label,
+                pkg.price,
+                mac || '',
+                'PENDING',
+                pkg.devices || 1,
+                now,
+                now
+            ]
         );
 
         res.json({
 
             message: 'STK Push sent. Enter your M-Pesa PIN.',
 
-            checkoutRequestId: stkRes.CheckoutRequestID
+            checkoutRequestId:
+                stkRes.CheckoutRequestID
 
         });
 
@@ -157,22 +269,29 @@ app.post('/api/mpesa/callback', async (req, res) => {
 
     try {
 
-        const callbackData = req.body?.Body?.stkCallback;
+        const callbackData =
+            req.body?.Body?.stkCallback;
 
         if (!callbackData) {
+
             return res.status(400).json({
                 error: 'Invalid callback.'
             });
+
         }
 
-        const checkoutId = callbackData.CheckoutRequestID;
+        const checkoutId =
+            callbackData.CheckoutRequestID;
 
-        const tx = pendingTransactions.get(checkoutId);
+        const tx = await db.get(
+            'SELECT * FROM transactions WHERE checkout_id = ?',
+            [checkoutId]
+        );
 
         if (!tx) {
 
             console.log(
-                'Callback received for unknown transaction:',
+                'Unknown M-Pesa transaction:',
                 checkoutId
             );
 
@@ -185,223 +304,161 @@ app.post('/api/mpesa/callback', async (req, res) => {
 
         if (
             tx.status === 'SUCCESS' ||
-            tx.status === 'PROCESSING'
+            tx.status === 'PROCESSING' ||
+            tx.status === 'EXPIRED'
         ) {
+
             return res.json({
                 ResultCode: 0,
-                ResultDesc: 'Already processing or completed'
+                ResultDesc: 'Already processed.'
             });
-        }
-
-        if (callbackData.ResultCode === 0) {
-
-            tx.status = 'PROCESSING';
-
-            const voucherCode = Math.random()
-                .toString(36)
-                .substring(2, 8)
-                .toUpperCase();
-
-            try {
-
-                await activateHotspotUser({
-
-                    username: voucherCode,
-
-                    password: voucherCode,
-
-                    pkg: tx.pkg,
-
-                    macAddress: tx.mac
-
-                });
-
-                const expiresAt =
-                    Date.now() +
-                    tx.pkg.hours * 60 * 60 * 1000;
-
-                activeSubscriptions.push({
-
-                    username: voucherCode,
-
-                    phone: tx.phone,
-
-                    package: tx.pkg.label,
-
-                    amount: tx.pkg.price,
-
-                    devices: tx.pkg.devices,
-
-                    expiresAt
-
-                });
-
-                tx.status = 'SUCCESS';
-
-                tx.voucher = voucherCode;
-
-                console.log(
-                    `Activated ${voucherCode} for ${tx.phone}`
-                );
-
-            } catch (mikrotikErr) {
-
-                console.error(
-                    'MikroTik Provisioning Error:',
-                    mikrotikErr.message
-                );
-
-                tx.status = 'MIKROTIK_ERROR';
-
-            }
-
-        } else {
-
-            tx.status = 'FAILED';
 
         }
 
-        res.json({
+        if (callbackData.ResultCode !== 0) {
 
-            ResultCode: 0,
+            await db.run(
+                `UPDATE transactions
+                 SET status = ?, updated_at = ?
+                 WHERE checkout_id = ?`,
+                ['FAILED', Date.now(), checkoutId]
+            );
 
-            ResultDesc: 'Accepted'
+            return res.json({
+                ResultCode: 0,
+                ResultDesc: 'Payment failed.'
+            });
 
-        });
+        }
 
-    } catch (err) {
+        const metadata =
+            callbackData.CallbackMetadata?.Item || [];
 
-        console.error(
-            'Callback processing error:',
-            err.message
+        const receiptItem = metadata.find(
+            item => item.Name === 'MpesaReceiptNumber'
         );
 
-        res.json({
+        const amountItem = metadata.find(
+            item => item.Name === 'Amount'
+        );
 
-            ResultCode: 0,
+        const phoneItem = metadata.find(
+            item => item.Name === 'PhoneNumber'
+        );
 
-            ResultDesc: 'Accepted'
+        const receipt = receiptItem?.Value;
 
-        });
+        const paidAmount = Number(amountItem?.Value);
 
-    }
+        const paidPhone = phoneItem?.Value
+            ? String(phoneItem.Value)
+            : '';
 
-});
+        if (
+            !receipt ||
+            !Number.isFinite(paidAmount) ||
+            paidAmount !== Number(tx.amount)
+        ) {
 
-// ======================================
-// CHECK PAYMENT STATUS
-// ======================================
+            await db.run(
+                `UPDATE transactions
+                 SET status = ?, updated_at = ?
+                 WHERE checkout_id = ?`,
+                ['PAYMENT_REVIEW', Date.now(), checkoutId]
+            );
 
-app.get('/api/status/:checkoutId', (req, res) => {
+            console.error(
+                'Payment validation failed:',
+                checkoutId
+            );
 
-    const tx = pendingTransactions.get(
-        req.params.checkoutId
-    );
-
-    if (!tx) {
-
-        return res.status(404).json({
-
-            status: 'NOT_FOUND'
-
-        });
-
-    }
-
-    res.json({
-
-        status: tx.status,
-
-        voucher: tx.voucher,
-
-        devices: tx.pkg.devices
-
-    });
-
-});
-
-// ======================================
-// ADMIN DASHBOARD DATA
-// ======================================
-
-app.get('/api/admin/overview-data', (req, res) => {
-
-    res.status(404).json({
-
-        error: 'Use the authenticated admin overview endpoint.'
-
-    });
-
-});
-
-// ======================================
-// AUTOMATIC SUBSCRIPTION EXPIRY
-// ======================================
-
-cron.schedule('* * * * *', async () => {
-
-    const now = Date.now();
-
-    for (
-        let i = activeSubscriptions.length - 1;
-        i >= 0;
-        i--
-    ) {
-
-        if (now >= activeSubscriptions[i].expiresAt) {
-
-            const expiredUser =
-                activeSubscriptions[i].username;
-
-            try {
-
-                await disconnectAndRemoveUser(expiredUser);
-
-                console.log(
-                    `Disconnected expired user: ${expiredUser}`
-                );
-
-                activeSubscriptions.splice(i, 1);
-
-            } catch (err) {
-
-                console.error(
-                    `Failed to disconnect ${expiredUser}:`,
-                    err.message
-                );
-
-            }
+            return res.json({
+                ResultCode: 0,
+                ResultDesc: 'Payment requires verification.'
+            });
 
         }
 
-    }
+        // ======================================
+        // START COUNTDOWN AT PAYMENT CONFIRMATION
+        // ======================================
 
-});
+        const paidAt = Date.now();
 
-// ======================================
-// ADMIN LOGIN PAGE
-// ======================================
+        const pkg = getPackage(tx.package_id);
 
-app.get('/admin', (req, res) => {
+        if (!pkg) {
+            throw new Error('Package no longer exists.');
+        }
 
-    res.redirect('/admin/login.html');
+        const expiresAt =
+            paidAt + getPackageDuration(pkg);
 
-});
+        const voucherCode = generateVoucher();
 
-// ======================================
-// SERVER START
-// ======================================
+        // ======================================
+        // PREVENT DUPLICATE PROCESSING
+        // ======================================
 
-const PORT = process.env.PORT || 3000;
+        const result = await db.run(
+            `UPDATE transactions
+             SET status = ?,
+                 voucher = ?,
+                 mpesa_receipt = ?,
+                 paid_at = ?,
+                 expires_at = ?,
+                 updated_at = ?
+             WHERE checkout_id = ?
+             AND status = 'PENDING'`,
+            [
+                'PROCESSING',
+                voucherCode,
+                receipt,
+                paidAt,
+                expiresAt,
+                paidAt,
+                checkoutId
+            ]
+        );
 
-app.listen(PORT, () => {
+        if (result.changes !== 1) {
 
-    console.log(
-        `WIFE CONNECT KENYA running on port ${PORT}`
-    );
+            return res.json({
+                ResultCode: 0,
+                ResultDesc: 'Already processing.'
+            });
 
-    console.log(
-        'Admin dashboard: /admin/login.html'
-    );
+        }
 
-});
+        // ======================================
+        // ACTIVATE MIKROTIK USER
+        // ======================================
+
+        if (expiresAt <= Date.now()) {
+
+            throw new Error('Package expired before activation.');
+
+        }
+
+        await activateHotspotUser({
+
+            username: voucherCode,
+
+            password: voucherCode,
+
+            pkg,
+
+            macAddress: tx.mac,
+
+            expiresAt
+
+        });
+
+        await db.run(
+            `INSERT INTO subscriptions (
+                username,
+                phone,
+                package_id,
+                package_label,
+                amount,
+                devices
