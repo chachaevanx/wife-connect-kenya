@@ -1,7 +1,14 @@
-```javascript
 const RouterOSAPI = require('node-routeros').RouterOSAPI;
 
 function getClient() {
+    if (
+        !process.env.MIKROTIK_HOST ||
+        !process.env.MIKROTIK_USER ||
+        !process.env.MIKROTIK_PASS
+    ) {
+        throw new Error('MikroTik environment variables are missing.');
+    }
+
     return new RouterOSAPI({
         host: process.env.MIKROTIK_HOST,
         port: Number(process.env.MIKROTIK_PORT || 8728),
@@ -11,10 +18,7 @@ function getClient() {
     });
 }
 
-// ======================================
-// ACTIVATE HOTSPOT USER
-// ======================================
-
+// CREATE OR UPDATE HOTSPOT USER
 async function activateHotspotUser({
     username,
     password,
@@ -22,47 +26,33 @@ async function activateHotspotUser({
     macAddress,
     expiresAt
 }) {
-
     const conn = getClient();
 
     await conn.connect();
 
     try {
-
-        if (!expiresAt || expiresAt <= Date.now()) {
-            throw new Error('Invalid or expired voucher.');
-        }
-
         const existing = await conn.write(
             '/ip/hotspot/user/print',
-            [`?name=${username}`]
+            ['?name=' + username]
         );
 
-        if (existing.length > 0) {
-            throw new Error('Voucher already exists.');
-        }
-
-        const remainingSeconds = Math.floor(
-            (expiresAt - Date.now()) / 1000
-        );
-
-        if (remainingSeconds <= 0) {
-            throw new Error('Package has expired.');
+        for (const user of existing) {
+            await conn.write(
+                '/ip/hotspot/user/remove',
+                ['=.id=' + user['.id']]
+            );
         }
 
         const userParams = [
-            `=name=${username}`,
-            `=password=${password}`,
-            `=profile=${pkg.profile}`,
-            `=limit-uptime=${remainingSeconds}s`,
-            `=comment=PAID_${pkg.id}_EXPIRES_${expiresAt}`
+            '=name=' + username,
+            '=password=' + password,
+            '=profile=' + pkg.profile,
+            '=limit-uptime=' + pkg.uptime,
+            '=comment=Paid_' + pkg.id + '_KES' + pkg.price
         ];
 
-        // Restrict single-device packages.
         if (pkg.devices === 1 && macAddress) {
-            userParams.push(
-                `=mac-address=${macAddress}`
-            );
+            userParams.push('=mac-address=' + macAddress);
         }
 
         await conn.write(
@@ -70,68 +60,52 @@ async function activateHotspotUser({
             userParams
         );
 
+        console.log('MikroTik voucher created:', username);
+
     } finally {
-
         conn.close();
-
     }
-
 }
 
-// ======================================
 // DISCONNECT AND REMOVE EXPIRED USER
-// ======================================
-
 async function disconnectAndRemoveUser(username) {
-
     const conn = getClient();
 
     await conn.connect();
 
     try {
-
-        // Find active sessions.
-        const active = await conn.write(
+        const activeUsers = await conn.write(
             '/ip/hotspot/active/print',
-            [`?user=${username}`]
+            ['?user=' + username]
         );
 
-        // Disconnect every active device.
-        for (const session of active) {
-
+        for (const session of activeUsers) {
             await conn.write(
                 '/ip/hotspot/active/remove',
-                [`=.id=${session['.id']}`]
+                ['=.id=' + session['.id']]
             );
-
         }
 
-        // Find hotspot account.
         const users = await conn.write(
             '/ip/hotspot/user/print',
-            [`?name=${username}`]
+            ['?name=' + username]
         );
 
-        // Remove expired account.
         for (const user of users) {
-
             await conn.write(
                 '/ip/hotspot/user/remove',
-                [`=.id=${user['.id']}`]
+                ['=.id=' + user['.id']]
             );
-
         }
 
+        console.log('Expired MikroTik user removed:', username);
+
     } finally {
-
         conn.close();
-
     }
-
 }
 
 module.exports = {
     activateHotspotUser,
     disconnectAndRemoveUser
 };
-```
