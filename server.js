@@ -461,4 +461,257 @@ app.post('/api/mpesa/callback', async (req, res) => {
                 package_id,
                 package_label,
                 amount,
-                devices
+                devices,
+                paid_at,
+                expires_at,
+                status,
+                created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                voucherCode,
+                tx.phone,
+                tx.package_id,
+                tx.package_label,
+                tx.amount,
+                tx.devices,
+                paidAt,
+                expiresAt,
+                'ACTIVE',
+                paidAt
+            ]
+        );
+
+        await db.run(
+            `UPDATE transactions
+             SET status = ?, updated_at = ?
+             WHERE checkout_id = ?`,
+            ['SUCCESS', Date.now(), checkoutId]
+        );
+
+        console.log(
+            `Activated ${voucherCode}. Expires: ${new Date(expiresAt).toISOString()}`
+        );
+
+        res.json({
+
+            ResultCode: 0,
+
+            ResultDesc: 'Payment processed.'
+
+        });
+
+    } catch (err) {
+
+        console.error(
+            'M-Pesa callback processing error:',
+            err.message
+        );
+
+        res.json({
+
+            ResultCode: 0,
+
+            ResultDesc: 'Accepted'
+
+        });
+
+    }
+
+});
+
+// ======================================
+// CHECK PAYMENT STATUS
+// ======================================
+
+app.get('/api/status/:checkoutId', async (req, res) => {
+
+    try {
+
+        const tx = await db.get(
+            `SELECT status, voucher, devices, expires_at
+             FROM transactions
+             WHERE checkout_id = ?`,
+            [req.params.checkoutId]
+        );
+
+        if (!tx) {
+
+            return res.status(404).json({
+                status: 'NOT_FOUND'
+            });
+
+        }
+
+        res.json({
+
+            status: tx.status,
+
+            voucher: tx.voucher,
+
+            devices: tx.devices,
+
+            expiresAt: tx.expires_at
+
+        });
+
+    } catch (err) {
+
+        console.error(err.message);
+
+        res.status(500).json({
+            error: 'Could not check payment status.'
+        });
+
+    }
+
+});
+
+// ======================================
+// AUTOMATIC EXPIRY
+// ======================================
+
+let expiryCheckRunning = false;
+
+async function checkExpiredSubscriptions() {
+
+    if (expiryCheckRunning) return;
+
+    expiryCheckRunning = true;
+
+    try {
+
+        const now = Date.now();
+
+        const expired = await db.all(
+            `SELECT username
+             FROM subscriptions
+             WHERE status = 'ACTIVE'
+             AND expires_at <= ?`,
+            [now]
+        );
+
+        for (const subscription of expired) {
+
+            try {
+
+                await disconnectAndRemoveUser(
+                    subscription.username
+                );
+
+                await db.run(
+                    `UPDATE subscriptions
+                     SET status = 'EXPIRED'
+                     WHERE username = ?`,
+                    [subscription.username]
+                );
+
+                await db.run(
+                    `UPDATE transactions
+                     SET status = 'EXPIRED',
+                         updated_at = ?
+                     WHERE voucher = ?
+                     AND status = 'SUCCESS'`,
+                    [now, subscription.username]
+                );
+
+                console.log(
+                    `Expired voucher blocked: ${subscription.username}`
+                );
+
+            } catch (err) {
+
+                console.error(
+                    `Expiry error for ${subscription.username}:`,
+                    err.message
+                );
+
+            }
+
+        }
+
+    } catch (err) {
+
+        console.error(
+            'Expiry checker error:',
+            err.message
+        );
+
+    } finally {
+
+        expiryCheckRunning = false;
+
+    }
+
+}
+
+cron.schedule('* * * * * *', () => {
+
+    checkExpiredSubscriptions();
+
+});
+
+// ======================================
+// ADMIN LOGIN PAGE
+// ======================================
+
+app.get('/admin', (req, res) => {
+
+    res.redirect('/admin/login.html');
+
+});
+
+// ======================================
+// HEALTH CHECK
+// ======================================
+
+app.get('/health', (req, res) => {
+
+    res.json({
+
+        status: 'online',
+
+        service: 'Galex Cyber WiFi Billing',
+
+        timestamp: new Date().toISOString()
+
+    });
+
+});
+
+// ======================================
+// SERVER START
+// ======================================
+
+const PORT = process.env.PORT || 3000;
+
+async function startServer() {
+
+    await initializeDatabase();
+
+    await checkExpiredSubscriptions();
+
+    app.listen(PORT, () => {
+
+        console.log(
+            `Galex Cyber WiFi running on port ${PORT}`
+        );
+
+        console.log(
+            'Admin dashboard: /admin/login.html'
+        );
+
+    });
+
+}
+
+startServer().catch(err => {
+
+    console.error(
+        'Server startup failed:',
+        err
+    );
+
+    process.exit(1);
+
+});
+```
