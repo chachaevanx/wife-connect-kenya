@@ -1,7 +1,8 @@
+```json
 {
   "name": "wife-connect-kenya",
   "version": "1.0.0",
-  "description": "WIFE CONNECT KENYA Hotspot Billing System",
+  "description": "Galex Cyber WiFi Billing System",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -14,6 +15,9 @@
     "node-routeros": "^1.6.9",
     "cookie-parser": "^1.4.7",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
   }
 }
+```
